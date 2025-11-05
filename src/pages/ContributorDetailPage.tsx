@@ -8,7 +8,7 @@ import { apiClient } from '../services/api'
 import type { CommitteeTypeMetadata, StateMetadata } from '../types/api'
 
 export default function ContributorDetailPage() {
-  const { contributorId, entityType: routeEntityType, state: routeState } = useParams<{
+  const { contributorId } = useParams<{
     contributorId: string
     entityType?: string
     state?: string

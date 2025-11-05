@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link, useLocation, useSearchParams } from 'react-router-dom'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { useCandidate, useCandidateStats, useContributorsByCandidate, useCommitteesByCandidate, useContributorEntityTypes, useContributorStates } from '../hooks/useApi'
 import { usePageTitle } from '../hooks/usePageTitle'
 import Breadcrumbs from '../components/Breadcrumbs'
 import type { EntityTypeMetadata, StateMetadata } from '../types/api'
 
 export default function CandidateDetailPage() {
-  const { candidateId, state: routeState } = useParams<{ candidateId: string; state?: string }>()
-  const location = useLocation()
+  const { candidateId } = useParams<{ candidateId: string; state?: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
   const id = parseInt(candidateId || '0', 10)
 
@@ -373,7 +372,7 @@ export default function CandidateDetailPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Top Contributors
+              Contributors
             </button>
             <button
               onClick={() => setActiveTab('contributions')}
@@ -383,7 +382,7 @@ export default function CandidateDetailPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Top Contributions
+              Contributions
             </button>
           </nav>
         </div>
@@ -520,7 +519,6 @@ export default function CandidateDetailPage() {
             displayLimit={contributionsLimit}
             setDisplayLimit={setContributionsLimit}
             formatCurrency={formatCurrency}
-            formatNumber={formatNumber}
           />
         )}
       </div>
@@ -683,13 +681,11 @@ function TopContributionsTab({
   displayLimit,
   setDisplayLimit,
   formatCurrency,
-  formatNumber,
 }: {
   contributors: any[]
   displayLimit: number
   setDisplayLimit: (fn: (prev: number) => number) => void
   formatCurrency: (amount: number) => string
-  formatNumber: (num: number) => string
 }) {
   // Client-side sorting state
   const [sortColumn, setSortColumn] = useState<'name' | 'date' | 'amount'>('amount')

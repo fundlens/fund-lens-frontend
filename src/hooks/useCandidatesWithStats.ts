@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../services/api';
 import type { CandidateList, CandidateStats } from '../types/api';
 
-export interface CandidateWithStats extends CandidateList {
+export interface CandidateWithStats extends Omit<CandidateList, 'stats'> {
   stats: CandidateStats | null;
 }
 
@@ -11,21 +11,21 @@ export function useCandidatesWithStats(state: string, office?: string, activeOnl
     queryKey: ['candidates-with-stats', state, office, activeOnly],
     queryFn: async () => {
       // Get all candidates for the state
-      const candidates = await apiClient.getCandidatesByState(state);
+      const candidatesResponse = await apiClient.getCandidatesByState(state);
 
       // Filter by office if specified
       let filtered = office
-        ? candidates.filter(c => c.office === office)
-        : candidates;
+        ? candidatesResponse.items.filter((c: CandidateList) => c.office === office)
+        : candidatesResponse.items;
 
       // Filter by active status if specified
       if (activeOnly) {
-        filtered = filtered.filter(c => c.is_active);
+        filtered = filtered.filter((c: CandidateList) => c.is_active);
       }
 
       // Fetch stats for each candidate
       const candidatesWithStats = await Promise.all(
-        filtered.map(async (candidate) => {
+        filtered.map(async (candidate: CandidateList) => {
           try {
             const stats = await apiClient.getCandidateStats(candidate.id);
             return { ...candidate, stats };

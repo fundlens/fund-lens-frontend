@@ -1,11 +1,10 @@
-import { useSearchParams, Link, useNavigate } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import { useSearchCandidates, useSearchContributors, useSearchCommittees } from '../hooks/useApi'
 import { usePageTitle } from '../hooks/usePageTitle'
 import Breadcrumbs from '../components/Breadcrumbs'
 
 export default function SearchResultsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const navigate = useNavigate()
   const query = searchParams.get('q') || ''
   const category = searchParams.get('category') || 'candidates'
 
@@ -60,20 +59,6 @@ export default function SearchResultsPage() {
   )
 
   const isLoading = candidatesLoading || contributorsLoading || committeesLoading
-
-  const getResultsCount = () => {
-    if (category === 'candidates') return candidateResults?.meta.total_items || 0
-    if (category === 'contributors') return contributorResults?.meta.total_items || 0
-    if (category === 'committees') return committeeResults?.meta.total_items || 0
-    return 0
-  }
-
-  const getCategoryLabel = () => {
-    if (category === 'candidates') return 'Candidates'
-    if (category === 'contributors') return 'Contributors'
-    if (category === 'committees') return 'Committees'
-    return ''
-  }
 
   if (!query) {
     return (

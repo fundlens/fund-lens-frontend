@@ -39,8 +39,8 @@ export default function CandidatesLandingPage() {
     district: districtParam || undefined,
     include_stats: true,
     min_total_amount: 0.01,  // Only fetch candidates with active fundraising
-    sort_by: 'total_amount',
-    order: 'desc',
+    sort_by: 'total_amount' as const,
+    order: 'desc' as const,
     page_size: 500
   }
 
@@ -62,14 +62,14 @@ export default function CandidatesLandingPage() {
   const candidatesToDisplay = sortedCandidates
 
   // Calculate available filter options based on candidates with active fundraising
-  const getLevel = (office: string) => {
+  const getLevel = (office: string): 'federal' | 'state' => {
     if (['H', 'S', 'P'].includes(office.toUpperCase())) {
       return 'federal'
     }
     return 'state'
   }
 
-  const availableLevels = Array.from(new Set(candidatesWithFundraising.map(c => getLevel(c.office))))
+  const availableLevels: ('federal' | 'state')[] = Array.from(new Set(candidatesWithFundraising.map(c => getLevel(c.office))))
   const availableParties = Array.from(new Set(candidatesWithFundraising.map(c => c.party).filter(Boolean)))
   const availableStates = Array.from(new Set(candidatesWithFundraising.map(c => c.state).filter(Boolean)))
   const availableOffices = Array.from(new Set(candidatesWithFundraising.map(c => c.office)))
@@ -82,8 +82,8 @@ export default function CandidatesLandingPage() {
     ).values()
   ).sort((a, b) => {
     // Sort by state first, then district number
-    if (a.state !== b.state) return a.state.localeCompare(b.state)
-    return parseInt(a.district) - parseInt(b.district)
+    if (a.state !== b.state) return a.state!.localeCompare(b.state!)
+    return parseInt(a.district!) - parseInt(b.district!)
   })
 
   // Display top candidates in table
@@ -110,7 +110,7 @@ export default function CandidatesLandingPage() {
   ]
 
   // Filter to only show options with active fundraising
-  const levels = allLevels.filter(l => availableLevels.includes(l.code))
+  const levels = allLevels.filter(l => availableLevels.includes(l.code as 'state' | 'federal'))
   const parties = allParties.filter(p => availableParties.includes(p.code))
 
   // Helper functions to get display labels
@@ -297,8 +297,8 @@ export default function CandidatesLandingPage() {
                         key={`${districtInfo.state}-${districtInfo.district}`}
                         onClick={() => {
                           const newParams = new URLSearchParams(searchParams)
-                          newParams.set('state', districtInfo.state)
-                          newParams.set('district', districtInfo.district)
+                          newParams.set('state', districtInfo.state!)
+                          newParams.set('district', districtInfo.district!)
                           setSearchParams(newParams)
                           setShowDistrictMenu(false)
                         }}
