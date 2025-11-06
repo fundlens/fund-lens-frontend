@@ -32,7 +32,7 @@ export default function CommitteesLandingPage() {
     min_total_received: 0.01,  // Only fetch committees with active fundraising
     sort_by: 'total_received' as const,
     order: 'desc' as const,
-    page_size: 500
+    page_size: 1000
   }
 
   const { data: committeesResponse, isLoading, error } = useCommittees(filters)

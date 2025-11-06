@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useSearchParams } from 'react-router-dom'
-import { useContributor, useContributorStats, useCommitteeTypes, useCommitteeStates } from '../hooks/useApi'
+import { useContributor, useContributorStats, useCommitteeTypes, useCommitteeStates, useRecipientsByContributor } from '../hooks/useApi'
 import { usePageTitle } from '../hooks/usePageTitle'
 import Breadcrumbs from '../components/Breadcrumbs'
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '../services/api'
-import type { CommitteeTypeMetadata, StateMetadata } from '../types/api'
+import type { CommitteeTypeMetadata, StateMetadata, RecipientAggregate } from '../types/api'
 
 export default function ContributorDetailPage() {
   const { contributorId } = useParams<{
@@ -20,11 +20,15 @@ export default function ContributorDetailPage() {
   const [recipientsLimit, setRecipientsLimit] = useState(25)
   const [contributionsLimit, setContributionsLimit] = useState(25)
   const [contributionsPage, setContributionsPage] = useState(1)
-  const [recipientsPage, setRecipientsPage] = useState(1)
   const [allContributions, setAllContributions] = useState<any[]>([])
-  const [allRecipientsContributions, setAllRecipientsContributions] = useState<any[]>([])
   const [sortBy, setSortBy] = useState<'recipient' | 'date' | 'amount'>('amount')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+  const [recipientsSortBy, setRecipientsSortBy] = useState<'committee_name' | 'total_amount' | 'contribution_count'>('total_amount')
+  const [recipientsSortDirection, setRecipientsSortDirection] = useState<'asc' | 'desc'>('desc')
+
+  // Date range filter state
+  const [startDate, setStartDate] = useState<string>('')
+  const [endDate, setEndDate] = useState<string>('')
 
   // Filter state
   const typeParam = searchParams.get('type')
@@ -37,23 +41,26 @@ export default function ContributorDetailPage() {
   const { data: contributor, isLoading: contributorLoading, error: contributorError } = useContributor(id)
   const { data: stats, isLoading: statsLoading } = useContributorStats(id)
 
-  // Fetch contributions data for Contributions tab (with pagination and sorting)
+  // Fetch contributions data for Contributions tab (with pagination, sorting, and date filtering)
   const { data: contributionsData, isLoading: contributionsLoading, error: contributionsError } = useQuery({
-    queryKey: ['contributor', id, 'contributions', contributionsPage, sortBy, sortDirection],
+    queryKey: ['contributor', id, 'contributions', contributionsPage, sortBy, sortDirection, startDate, endDate],
     queryFn: async () => {
-      return apiClient.request<any>(`/contributors/${id}/contributions?page=${contributionsPage}&page_size=100&sort_by=${sortBy}&sort_direction=${sortDirection}`)
+      let url = `/contributors/${id}/contributions?page=${contributionsPage}&page_size=1000&sort_by=${sortBy}&sort_direction=${sortDirection}`
+      if (startDate) url += `&start_date=${startDate}`
+      if (endDate) url += `&end_date=${endDate}`
+      return apiClient.request<any>(url)
     },
     enabled: !!id && activeTab === 'contributions'
   })
 
-  // Fetch contributions data for Recipients tab (no sorting, just pagination)
-  const { data: recipientsData, isLoading: recipientsLoading, error: recipientsError } = useQuery({
-    queryKey: ['contributor', id, 'recipients-contributions', recipientsPage],
-    queryFn: async () => {
-      return apiClient.request<any>(`/contributors/${id}/contributions?page=${recipientsPage}&page_size=100`)
-    },
-    enabled: !!id && activeTab === 'recipients'
-  })
+  // Fetch pre-aggregated recipients data for Recipients tab
+  const { data: recipientsResponse, isLoading: recipientsLoading, error: recipientsError } = useRecipientsByContributor(
+    id,
+    {
+      sort_by: recipientsSortBy,
+      sort_direction: recipientsSortDirection
+    }
+  )
 
   // Fetch metadata for filters
   const { data: committeeTypes } = useCommitteeTypes(true)
@@ -69,17 +76,6 @@ export default function ContributorDetailPage() {
       }
     }
   }, [contributionsData, contributionsPage])
-
-  // Accumulate contributions for Recipients tab as new pages are loaded
-  useEffect(() => {
-    if (recipientsData?.contributions) {
-      if (recipientsPage === 1) {
-        setAllRecipientsContributions(recipientsData.contributions)
-      } else {
-        setAllRecipientsContributions(prev => [...prev, ...recipientsData.contributions])
-      }
-    }
-  }, [recipientsData, recipientsPage])
 
   // Handle sort changes - reset to page 1 and clear accumulated data
   const handleSortChange = (newSortBy: 'recipient' | 'date' | 'amount') => {
@@ -156,18 +152,19 @@ export default function ContributorDetailPage() {
     return true
   })
 
-  // Apply filters to contributions data for Recipients tab
-  const filteredRecipientsContributions = allRecipientsContributions.filter(contribution => {
-    if (typeParam && contribution.committee_type !== typeParam) return false
-    if (locationParam && contribution.committee_state !== locationParam) return false
-    if (partyParam && contribution.committee_party !== partyParam) return false
+  // Apply filters to pre-aggregated recipients data
+  const recipients = recipientsResponse?.recipients || []
+  const filteredRecipients = recipients.filter(recipient => {
+    if (typeParam && recipient.committee_type !== typeParam) return false
+    if (locationParam && recipient.committee_state !== locationParam) return false
+    if (partyParam && recipient.committee_party !== partyParam) return false
     return true
   })
 
-  // Calculate available filter options from unfiltered data (use recipients data as it's not affected by sorting)
-  const availableTypes = Array.from(new Set(allRecipientsContributions.map(c => c.committee_type).filter(Boolean)))
-  const availableStates = Array.from(new Set(allRecipientsContributions.map(c => c.committee_state).filter(Boolean)))
-  const availableParties = Array.from(new Set(allRecipientsContributions.map(c => c.committee_party).filter(Boolean)))
+  // Calculate available filter options from unfiltered recipients data
+  const availableTypes = Array.from(new Set(recipients.map(r => r.committee_type).filter(Boolean)))
+  const availableStates = Array.from(new Set(recipients.map(r => r.committee_state).filter(Boolean)))
+  const availableParties = Array.from(new Set(recipients.map(r => r.committee_party).filter(Boolean)))
   const parties = allParties.filter(p => availableParties.includes(p.code))
 
   if (contributorLoading) {
@@ -440,6 +437,54 @@ export default function ContributorDetailPage() {
               </div>
             </div>
 
+            {/* Date Range Filter (only shown on Contributions tab) */}
+            {activeTab === 'contributions' && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-sm font-medium text-gray-700">Date Range:</span>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-600">From:</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        setStartDate(e.target.value)
+                        setContributionsPage(1)
+                        setAllContributions([])
+                      }}
+                      className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-600">To:</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => {
+                        setEndDate(e.target.value)
+                        setContributionsPage(1)
+                        setAllContributions([])
+                      }}
+                      className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  {(startDate || endDate) && (
+                    <button
+                      onClick={() => {
+                        setStartDate('')
+                        setEndDate('')
+                        setContributionsPage(1)
+                        setAllContributions([])
+                      }}
+                      className="text-sm text-purple-600 hover:text-purple-800 underline"
+                    >
+                      Clear dates
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Active Filters */}
             <div className="flex flex-wrap items-center gap-2">
               {!typeParam && !locationParam && !partyParam ? (
@@ -507,15 +552,22 @@ export default function ContributorDetailPage() {
             </div>
           ) : (
             <TopRecipientsTab
-              contributions={filteredRecipientsContributions}
+              recipients={filteredRecipients}
               displayLimit={recipientsLimit}
               setDisplayLimit={setRecipientsLimit}
               formatCurrency={formatCurrency}
               formatNumber={formatNumber}
               getCommitteeTypeDisplay={getCommitteeTypeDisplay}
-              allContributions={allRecipientsContributions}
-              onLoadMore={() => setRecipientsPage(prev => prev + 1)}
-              isLoadingMore={recipientsLoading && recipientsPage > 1}
+              onSortChange={(column) => {
+                if (recipientsSortBy === column) {
+                  setRecipientsSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')
+                } else {
+                  setRecipientsSortBy(column)
+                  setRecipientsSortDirection(column === 'committee_name' ? 'asc' : 'desc')
+                }
+              }}
+              sortBy={recipientsSortBy}
+              sortDirection={recipientsSortDirection}
             />
           )
         ) : (
@@ -551,111 +603,36 @@ export default function ContributorDetailPage() {
 }
 
 function TopRecipientsTab({
-  contributions,
+  recipients,
   displayLimit,
   setDisplayLimit,
   formatCurrency,
   formatNumber,
   getCommitteeTypeDisplay,
-  allContributions,
-  onLoadMore,
-  isLoadingMore,
+  onSortChange,
+  sortBy,
+  sortDirection,
 }: {
-  contributions: any[]
+  recipients: RecipientAggregate[]
   displayLimit: number
   setDisplayLimit: (fn: (prev: number) => number) => void
   formatCurrency: (amount: number) => string
   formatNumber: (num: number) => string
   getCommitteeTypeDisplay: (code: string) => string
-  allContributions: any[]
-  onLoadMore: () => void
-  isLoadingMore: boolean
+  onSortChange: (column: 'committee_name' | 'total_amount' | 'contribution_count') => void
+  sortBy: 'committee_name' | 'total_amount' | 'contribution_count'
+  sortDirection: 'asc' | 'desc'
 }) {
-  const [sortColumn, setSortColumn] = useState<'recipient' | 'contributions' | 'total'>('total')
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
-
-  // Group contributions by recipient and calculate totals
-  const recipientMap = new Map<number, { name: string; id: number; total: number; count: number; type: string; state: string | null; party: string | null }>()
-
-  contributions.forEach((contribution: any) => {
-    const recipientId = contribution.committee_id
-    const recipientName = contribution.committee_name || 'Unknown Committee'
-    const amount = parseFloat(contribution.amount)
-
-    if (recipientId && amount > 0) {
-      if (recipientMap.has(recipientId)) {
-        const existing = recipientMap.get(recipientId)!
-        existing.total += amount
-        existing.count += 1
-      } else {
-        recipientMap.set(recipientId, {
-          id: recipientId,
-          name: recipientName,
-          total: amount,
-          count: 1,
-          type: contribution.committee_type || 'N/A',
-          state: contribution.committee_state || null,
-          party: contribution.committee_party || null
-        })
-      }
-    }
-  })
-
-  // Handle sort
-  const handleSort = (column: 'recipient' | 'contributions' | 'total') => {
-    if (sortColumn === column) {
-      // Toggle direction if same column
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
-    } else {
-      // New column, set to descending by default (except recipient name)
-      setSortColumn(column)
-      setSortDirection(column === 'recipient' ? 'asc' : 'desc')
-    }
-  }
-
-  // Convert to array and apply sorting
-  const recipients = Array.from(recipientMap.values()).sort((a, b) => {
-    let comparison = 0
-
-    switch (sortColumn) {
-      case 'recipient':
-        comparison = a.name.localeCompare(b.name)
-        break
-      case 'contributions':
-        comparison = a.count - b.count
-        break
-      case 'total':
-        comparison = a.total - b.total
-        break
-    }
-
-    return sortDirection === 'asc' ? comparison : -comparison
-  })
-
   const displayedRecipients = recipients.slice(0, displayLimit)
-
-  // Calculate total unique recipients from all loaded contributions (not just filtered)
-  const totalUniqueRecipients = new Set(allContributions.map(c => c.committee_id)).size
-
-  // Check if we have more recipients to display from currently loaded data
-  const hasMoreToDisplay = displayLimit < recipients.length
-
-  // Check if we might have more recipients to load from server
-  // We need to load more if we haven't loaded all contributions yet
-  const allUniqueRecipientsLoaded = new Set(allContributions.map(c => c.committee_id))
-  const hasMoreToLoad = allUniqueRecipientsLoaded.size >= displayLimit && allContributions.length > 0
+  const hasMore = displayLimit < recipients.length
 
   const handleShowMore = () => {
-    // If we're near the end of loaded data, fetch more from server
-    if (displayLimit + 25 >= recipients.length && hasMoreToLoad) {
-      onLoadMore()
-    }
     setDisplayLimit(prev => prev + 25)
   }
 
   // Sort indicator component
-  const SortIndicator = ({ column }: { column: 'recipient' | 'contributions' | 'total' }) => {
-    if (sortColumn !== column) {
+  const SortIndicator = ({ column }: { column: 'committee_name' | 'contribution_count' | 'total_amount' }) => {
+    if (sortBy !== column) {
       return (
         <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
@@ -686,11 +663,11 @@ function TopRecipientsTab({
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <button
-                      onClick={() => handleSort('recipient')}
+                      onClick={() => onSortChange('committee_name')}
                       className="group flex items-center gap-1 hover:text-gray-700 transition"
                     >
                       <span>Recipient</span>
-                      <SortIndicator column="recipient" />
+                      <SortIndicator column="committee_name" />
                     </button>
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -704,54 +681,54 @@ function TopRecipientsTab({
                   </th>
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <button
-                      onClick={() => handleSort('contributions')}
+                      onClick={() => onSortChange('contribution_count')}
                       className="group flex items-center gap-1 hover:text-gray-700 transition ml-auto"
                     >
                       <span>Contributions</span>
-                      <SortIndicator column="contributions" />
+                      <SortIndicator column="contribution_count" />
                     </button>
                   </th>
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <button
-                      onClick={() => handleSort('total')}
+                      onClick={() => onSortChange('total_amount')}
                       className="group flex items-center gap-1 hover:text-gray-700 transition ml-auto"
                     >
                       <span>Total Contributed</span>
-                      <SortIndicator column="total" />
+                      <SortIndicator column="total_amount" />
                     </button>
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {displayedRecipients.map((recipient, index) => (
-                  <tr key={recipient.id} className="hover:bg-gray-50">
+                  <tr key={recipient.committee_id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {index + 1}
                     </td>
                     <td className="px-6 py-4">
                       <Link
-                        to={`/committees/${recipient.id}`}
+                        to={`/committees/${recipient.committee_id}`}
                         className="text-blue-600 hover:text-blue-800 font-medium"
                       >
-                        {recipient.name}
+                        {recipient.committee_name}
                       </Link>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                        {getCommitteeTypeDisplay(recipient.type)}
+                        {getCommitteeTypeDisplay(recipient.committee_type)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {recipient.state || 'N/A'}
+                      {recipient.committee_state || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {recipient.party || 'N/A'}
+                      {recipient.committee_party || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                      {formatNumber(recipient.count)}
+                      {formatNumber(recipient.contribution_count)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-semibold">
-                      {formatCurrency(recipient.total)}
+                      {formatCurrency(recipient.total_amount)}
                     </td>
                   </tr>
                 ))}
@@ -759,24 +736,16 @@ function TopRecipientsTab({
             </table>
           </div>
           <div className="mt-6 text-center">
-            {(hasMoreToDisplay || hasMoreToLoad) ? (
+            {hasMore ? (
               <button
                 onClick={handleShowMore}
-                disabled={isLoadingMore}
-                className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
               >
-                {isLoadingMore ? (
-                  <>
-                    <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
-                    Loading...
-                  </>
-                ) : (
-                  `Load 25 more (${displayedRecipients.length} of ${totalUniqueRecipients.toLocaleString()})`
-                )}
+                Show 25 more ({displayedRecipients.length} of {recipients.length.toLocaleString()})
               </button>
             ) : recipients.length > 0 ? (
               <p className="text-gray-600 font-medium">
-                {recipients.length.toLocaleString()} {recipients.length === 1 ? 'recipient' : 'recipients'}
+                Showing all {recipients.length.toLocaleString()} {recipients.length === 1 ? 'recipient' : 'recipients'}
               </p>
             ) : null}
           </div>

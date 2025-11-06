@@ -41,7 +41,7 @@ export default function CandidatesLandingPage() {
     min_total_amount: 0.01,  // Only fetch candidates with active fundraising
     sort_by: 'total_amount' as const,
     order: 'desc' as const,
-    page_size: 500
+    page_size: 1000
   }
 
   const { data: candidatesResponse, isLoading, error } = useCandidates(filters)

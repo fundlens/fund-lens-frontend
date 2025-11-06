@@ -32,7 +32,7 @@ export default function CommitteeDetailPage() {
   const { data: stats, isLoading: statsLoading } = useCommitteeStats(id)
   const { data: contributorsData, isLoading: contributorsLoading, error: contributorsError } = useContributorsByCommittee(id, {
     page: contributorsPage,
-    page_size: 100,
+    page_size: 1000,
     include_contributions: true,
     sort_by: sortBy,
     order: sortDirection

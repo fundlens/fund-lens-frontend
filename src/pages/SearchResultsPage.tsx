@@ -1,5 +1,5 @@
 import { useSearchParams, Link } from 'react-router-dom'
-import { useSearchCandidates, useSearchContributors, useSearchCommittees } from '../hooks/useApi'
+import { useSearch } from '../hooks/useApi'
 import { usePageTitle } from '../hooks/usePageTitle'
 import Breadcrumbs from '../components/Breadcrumbs'
 
@@ -42,23 +42,21 @@ export default function SearchResultsPage() {
     return 'bg-gray-100 text-gray-800'
   }
 
-  // Fetch search results for all categories to show counts
-  const { data: candidateResults, isLoading: candidatesLoading } = useSearchCandidates(
-    { q: query, page_size: 50 },
+  // Fetch unified search results for all categories
+  // Use field selection to reduce payload size - only request fields we display
+  const { data: searchResults, isLoading, error: searchError } = useSearch(
+    {
+      q: query,
+      page_size: 1000,
+      fields: 'id,name,office,state,district,party,is_active,committee_type,city,entity_type,employer,occupation'
+    },
     query.length > 0
   )
 
-  const { data: contributorResults, isLoading: contributorsLoading } = useSearchContributors(
-    { q: query, page_size: 50 },
-    query.length > 0
-  )
-
-  const { data: committeeResults, isLoading: committeesLoading } = useSearchCommittees(
-    { q: query, page_size: 50 },
-    query.length > 0
-  )
-
-  const isLoading = candidatesLoading || contributorsLoading || committeesLoading
+  // Extract results by category from unified response
+  const candidateResults = searchResults?.candidates
+  const contributorResults = searchResults?.contributors
+  const committeeResults = searchResults?.committees
 
   if (!query) {
     return (
@@ -141,6 +139,15 @@ export default function SearchResultsPage() {
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
           <p className="mt-4 text-gray-600">Searching...</p>
+        </div>
+      ) : searchError ? (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">Error performing search. Please try again.</p>
+          <p className="text-sm text-red-600 mt-2">Technical details: {String(searchError)}</p>
+        </div>
+      ) : !candidateResults && !committeeResults && !contributorResults ? (
+        <div className="text-center py-12">
+          <p className="text-gray-600">No results found. Please try a different search term.</p>
         </div>
       ) : (
         <>

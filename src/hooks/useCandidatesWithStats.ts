@@ -23,20 +23,30 @@ export function useCandidatesWithStats(state: string, office?: string, activeOnl
         filtered = filtered.filter((c: CandidateList) => c.is_active);
       }
 
-      // Fetch stats for each candidate
-      const candidatesWithStats = await Promise.all(
-        filtered.map(async (candidate: CandidateList) => {
-          try {
-            const stats = await apiClient.getCandidateStats(candidate.id);
-            return { ...candidate, stats };
-          } catch (error) {
-            console.error(`Failed to fetch stats for candidate ${candidate.id}:`, error);
-            return { ...candidate, stats: null };
-          }
-        })
-      );
+      // Fetch stats for all candidates in a single batch request
+      if (filtered.length === 0) {
+        return [];
+      }
 
-      return candidatesWithStats;
+      try {
+        const candidateIds = filtered.map((c: CandidateList) => c.id);
+        const statsMap = await apiClient.getBatchCandidateStats(candidateIds);
+
+        // Map stats back to candidates
+        const candidatesWithStats = filtered.map((candidate: CandidateList) => ({
+          ...candidate,
+          stats: statsMap[candidate.id] || null,
+        }));
+
+        return candidatesWithStats;
+      } catch (error) {
+        console.error('Failed to fetch batch candidate stats:', error);
+        // Return candidates with null stats on error
+        return filtered.map((candidate: CandidateList) => ({
+          ...candidate,
+          stats: null,
+        }));
+      }
     },
     staleTime: 1000 * 60 * 10, // 10 minutes
   });

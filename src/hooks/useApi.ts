@@ -4,8 +4,18 @@ import type {
   CandidateFilters,
   CommitteeFilters,
   ContributorFilters,
+  RecipientFilters,
   SearchParams,
 } from '../types/api';
+
+// Unified search hook
+export function useSearch(params: SearchParams, enabled = true) {
+  return useQuery({
+    queryKey: ['search', params],
+    queryFn: () => apiClient.search(params),
+    enabled: enabled && params.q.length > 0,
+  });
+}
 
 // Candidate hooks
 export function useCandidates(filters?: CandidateFilters) {
@@ -122,6 +132,13 @@ export function useContributorStats(contributorId: number) {
   return useQuery({
     queryKey: ['contributor', contributorId, 'stats'],
     queryFn: () => apiClient.getContributorStats(contributorId),
+  });
+}
+
+export function useRecipientsByContributor(contributorId: number, filters?: RecipientFilters) {
+  return useQuery({
+    queryKey: ['contributor', contributorId, 'recipients', filters],
+    queryFn: () => apiClient.getRecipientsByContributor(contributorId, filters),
   });
 }
 
