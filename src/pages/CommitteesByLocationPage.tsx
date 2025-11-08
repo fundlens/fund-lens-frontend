@@ -28,7 +28,7 @@ export default function CommitteesByLocationPage() {
     include_stats: true,
     sort_by: 'total_received',
     order: 'desc',
-    page_size: 100
+    page_size: 1000
   })
   const committees = committeesResponse?.items
 

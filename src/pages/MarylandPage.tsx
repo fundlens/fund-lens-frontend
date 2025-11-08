@@ -14,9 +14,9 @@ export default function MarylandPage() {
 
   // Get unique races that have candidates
   const availableRaces = useMemo(() => {
-    if (!allCandidates) return []
+    if (!allCandidates?.items) return []
 
-    const offices = Array.from(new Set(allCandidates.map(c => c.office)))
+    const offices = Array.from(new Set(allCandidates.items.map(c => c.office)))
     const raceMap: { office: string; label: string; path: string }[] = []
 
     if (offices.includes('H')) {
@@ -120,7 +120,7 @@ export default function MarylandPage() {
                 {topCandidates.map((candidate, index) => (
                   <CandidateTableRow
                     key={candidate.id}
-                    candidate={candidate}
+                    candidate={candidate as any}
                     rank={index + 1}
                     showRace={true}
                   />
@@ -134,7 +134,7 @@ export default function MarylandPage() {
             {topCandidates.map((candidate, index) => (
               <CandidateCard
                 key={candidate.id}
-                candidate={candidate}
+                candidate={candidate as any}
                 rank={index + 1}
                 totalRaised={candidate.stats?.total_amount || 0}
               />

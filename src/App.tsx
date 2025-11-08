@@ -14,11 +14,7 @@ import CommitteeDetailPage from './pages/CommitteeDetailPage'
 import ContributorDetailPage from './pages/ContributorDetailPage'
 import CandidatesLandingPage from './pages/CandidatesLandingPage'
 import CommitteesLandingPage from './pages/CommitteesLandingPage'
-import CommitteesByTypePage from './pages/CommitteesByTypePage'
-import CommitteesByLocationPage from './pages/CommitteesByLocationPage'
 import ContributorsLandingPage from './pages/ContributorsLandingPage'
-import ContributorsByTypePage from './pages/ContributorsByTypePage'
-import ContributorsByLocationPage from './pages/ContributorsByLocationPage'
 
 function App() {
   return (

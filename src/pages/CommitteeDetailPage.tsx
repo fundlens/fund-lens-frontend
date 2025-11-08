@@ -32,7 +32,7 @@ export default function CommitteeDetailPage() {
   const { data: stats, isLoading: statsLoading } = useCommitteeStats(id)
   const { data: contributorsData, isLoading: contributorsLoading, error: contributorsError } = useContributorsByCommittee(id, {
     page: contributorsPage,
-    page_size: 100,
+    page_size: 1000,
     include_contributions: true,
     sort_by: sortBy,
     order: sortDirection
@@ -298,7 +298,7 @@ export default function CommitteeDetailPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Top Contributors
+              Contributors
             </button>
             <button
               onClick={() => setActiveTab('contributions')}
@@ -308,7 +308,7 @@ export default function CommitteeDetailPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Top Contributions
+              Contributions
             </button>
           </nav>
         </div>
@@ -445,7 +445,6 @@ export default function CommitteeDetailPage() {
             displayLimit={contributionsLimit}
             setDisplayLimit={setContributionsLimit}
             formatCurrency={formatCurrency}
-            formatNumber={formatNumber}
           />
         )}
       </div>
@@ -608,13 +607,11 @@ function TopContributionsTab({
   displayLimit,
   setDisplayLimit,
   formatCurrency,
-  formatNumber,
 }: {
   contributors: any[]
   displayLimit: number
   setDisplayLimit: (fn: (prev: number) => number) => void
   formatCurrency: (amount: number) => string
-  formatNumber: (num: number) => string
 }) {
   // Client-side sorting state
   const [sortColumn, setSortColumn] = useState<'name' | 'date' | 'amount'>('amount')

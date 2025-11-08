@@ -22,7 +22,7 @@ export default function FederalLandingPage() {
     include_stats: true,
     sort_by: 'total_amount',
     order: 'desc',
-    page_size: 50
+    page_size: 1000
   })
   const candidatesWithStats = candidatesWithStatsResponse?.items
 

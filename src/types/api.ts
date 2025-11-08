@@ -41,6 +41,11 @@ export interface CandidateStats {
   avg_contribution: number;
 }
 
+// Batch Stats Response
+export interface BatchCandidateStatsResponse {
+  [candidateId: number]: CandidateStats;
+}
+
 // Committee Types
 export interface CommitteeList {
   id: number;
@@ -168,6 +173,58 @@ export interface ContributorsByEntityResponse {
   meta: PaginationMeta;
 }
 
+// Pre-aggregated Recipient Response
+export interface RecipientAggregate {
+  committee_id: number;
+  committee_name: string;
+  committee_type: string;
+  committee_party: string | null;
+  committee_state: string | null;
+  total_amount: number;
+  contribution_count: number;
+}
+
+export interface RecipientsByContributorResponse {
+  contributor: {
+    id: number;
+    name: string;
+  };
+  summary: {
+    total_recipients: number;
+    total_amount: number;
+    total_contributions: number;
+  };
+  recipients: RecipientAggregate[];
+  meta: PaginationMeta;
+}
+
+export interface RecipientFilters {
+  page?: number;
+  page_size?: number;
+  committee_type?: string;
+  committee_state?: string;
+  committee_party?: string;
+  min_amount?: number;
+  sort_by?: 'committee_name' | 'total_amount' | 'contribution_count';
+  order?: 'asc' | 'desc';
+  [key: string]: unknown;
+}
+
+// Contribution Filters (for querying contributions by contributor/committee)
+export interface ContributionFilters {
+  page?: number;
+  page_size?: number;
+  committee_id?: number;
+  contributor_id?: number;
+  min_amount?: number;
+  max_amount?: number;
+  start_date?: string;  // ISO 8601 date format (YYYY-MM-DD)
+  end_date?: string;    // ISO 8601 date format (YYYY-MM-DD)
+  sort_by?: 'date' | 'amount' | 'recipient' | 'contributor';
+  sort_direction?: 'asc' | 'desc';
+  [key: string]: unknown;
+}
+
 // Query Parameters
 export interface CandidateFilters {
   page?: number;
@@ -183,6 +240,7 @@ export interface CandidateFilters {
   min_total_amount?: number;
   sort_by?: 'name' | 'total_amount' | 'contribution_count';
   order?: 'asc' | 'desc';
+  fields?: string;  // Comma-separated list of fields to include
   [key: string]: unknown;
 }
 
@@ -199,6 +257,7 @@ export interface ContributorFilters {
   sort_by?: 'total_amount' | 'contribution_count' | 'name' | 'first_date' | 'last_date';
   order?: 'asc' | 'desc';
   include_contributions?: boolean;
+  fields?: string;  // Comma-separated list of fields to include
   [key: string]: unknown;
 }
 
@@ -215,6 +274,7 @@ export interface CommitteeFilters {
   min_total_received?: number;
   sort_by?: 'name' | 'total_received';
   order?: 'asc' | 'desc';
+  fields?: string;  // Comma-separated list of fields to include
   [key: string]: unknown;
 }
 
@@ -230,7 +290,24 @@ export interface SearchParams {
   include_stats?: boolean;
   sort_by?: string;
   order?: 'asc' | 'desc';
+  fields?: string;  // Comma-separated list of fields to include
   [key: string]: unknown;
+}
+
+// Unified Search Response
+export interface UnifiedSearchResponse {
+  candidates: {
+    items: CandidateList[];
+    meta: PaginationMeta;
+  };
+  committees: {
+    items: CommitteeList[];
+    meta: PaginationMeta;
+  };
+  contributors: {
+    items: ContributorList[];
+    meta: PaginationMeta;
+  };
 }
 
 // Metadata Types
