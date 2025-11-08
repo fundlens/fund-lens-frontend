@@ -3,6 +3,7 @@ import type {
   CandidateList,
   CandidateDetail,
   CandidateStats,
+  BatchCandidateStatsResponse,
   CandidateFilters,
   CommitteeList,
   CommitteeDetail,
@@ -14,7 +15,10 @@ import type {
   ContributorFilters,
   TopContributor,
   ContributorsByEntityResponse,
+  RecipientsByContributorResponse,
+  RecipientFilters,
   SearchParams,
+  UnifiedSearchResponse,
   StateMetadata,
   EntityTypeMetadata,
   CommitteeTypeMetadata,
@@ -30,7 +34,7 @@ class ApiClient {
     this.baseUrl = baseUrl;
   }
 
-  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
 
     try {
@@ -65,6 +69,12 @@ class ApiClient {
     return `?${searchParams.toString()}`;
   }
 
+  // Unified search endpoint
+  async search(params: SearchParams): Promise<UnifiedSearchResponse> {
+    const query = this.buildQueryString(params);
+    return this.request<UnifiedSearchResponse>(`/search${query}`);
+  }
+
   // Candidate endpoints
   async getCandidates(filters?: CandidateFilters): Promise<PaginatedResponse<CandidateList>> {
     const query = filters ? this.buildQueryString(filters) : '';
@@ -91,6 +101,11 @@ class ApiClient {
 
   async getCandidateStats(candidateId: number): Promise<CandidateStats> {
     return this.request<CandidateStats>(`/candidates/${candidateId}/stats`);
+  }
+
+  async getBatchCandidateStats(candidateIds: number[]): Promise<BatchCandidateStatsResponse> {
+    const ids = candidateIds.join(',');
+    return this.request<BatchCandidateStatsResponse>(`/candidates/stats?ids=${ids}`);
   }
 
   // Committee endpoints
@@ -141,6 +156,11 @@ class ApiClient {
 
   async getContributorStats(contributorId: number): Promise<ContributorStats> {
     return this.request<ContributorStats>(`/contributors/${contributorId}/stats`);
+  }
+
+  async getRecipientsByContributor(contributorId: number, filters?: RecipientFilters): Promise<RecipientsByContributorResponse> {
+    const query = filters ? this.buildQueryString(filters) : '';
+    return this.request<RecipientsByContributorResponse>(`/contributors/${contributorId}/recipients${query}`);
   }
 
   async getContributorsByCandidate(candidateId: number, filters?: ContributorFilters): Promise<ContributorsByEntityResponse> {
