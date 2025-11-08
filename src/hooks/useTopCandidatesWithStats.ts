@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../services/api';
 import type { CandidateList, CandidateStats } from '../types/api';
 
-export interface CandidateWithStats extends CandidateList {
+export interface CandidateWithStats extends Omit<CandidateList, 'stats'> {
   stats: CandidateStats | null;
 }
 
@@ -28,19 +28,19 @@ export function useTopCandidatesWithStats(state: string, limit = 10, office?: st
     queryKey: ['top-candidates-with-stats', state, limit, office],
     queryFn: async () => {
       // Get all active candidates for the state
-      const candidates = await apiClient.getCandidatesByState(state);
-      let activeCandidates = candidates.filter(c => c.is_active);
+      const candidatesResponse = await apiClient.getCandidatesByState(state);
+      let activeCandidates = candidatesResponse.items.filter((c: CandidateList) => c.is_active);
 
       // Filter by office if specified
       if (office) {
-        activeCandidates = activeCandidates.filter(c => c.office === office);
+        activeCandidates = activeCandidates.filter((c: CandidateList) => c.office === office);
       }
 
       // Fetch stats in batches of 10 to avoid overwhelming the API
       const candidatesWithStats = await fetchInBatches(
         activeCandidates,
         10,
-        async (candidate) => {
+        async (candidate: CandidateList) => {
           try {
             const stats = await apiClient.getCandidateStats(candidate.id);
             return { ...candidate, stats };
