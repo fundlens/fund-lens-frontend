@@ -46,7 +46,7 @@ export default function UniversalSearch({ onSearch }: UniversalSearchProps) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={`Search ${category}...`}
-            className="w-full px-4 py-3 pl-12 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 pl-12 rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <svg
             className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
