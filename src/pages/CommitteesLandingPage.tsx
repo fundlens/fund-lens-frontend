@@ -341,10 +341,15 @@ export default function CommitteesLandingPage() {
                           {committee.name}
                         </Link>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                          {committee.committee_type} - {getCommitteeTypeLabel(committee.committee_type)}
-                        </span>
+                      <td className="px-6 py-4">
+                        <div className="flex items-start gap-2">
+                          <span className="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 whitespace-nowrap">
+                            {committee.committee_type}
+                          </span>
+                          <span className="text-xs text-gray-600">
+                            {getCommitteeTypeLabel(committee.committee_type)}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {committee.party ? (
