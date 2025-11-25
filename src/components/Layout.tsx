@@ -69,7 +69,7 @@ export default function Layout() {
               />
             </svg>
             <p className="text-sm text-blue-800">
-              <span className="font-semibold">Data Notice:</span> FundLens currently contains FEC data for federal races in Maryland for the 2025-2026 election cycle only.
+              <span className="font-semibold">Data Notice:</span> FundLens contains FEC Schedule A contribution data for federal races in the 2025-2026 election cycle only.
             </p>
           </div>
         </div>
