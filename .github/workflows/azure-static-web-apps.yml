@@ -113,7 +113,7 @@ jobs:
           lfs: false
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: react-build
           path: dist/
