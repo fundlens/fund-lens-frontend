@@ -91,7 +91,7 @@ jobs:
           VITE_SHOW_SERVICE_URL: ${{ secrets.VITE_API_BASE_URL }}
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: react-build
           path: dist/
